@@ -30,6 +30,21 @@ func main() {
 		log.Fatalf("Getting interface %s: %s", ifname, err)
 	}
 
+	// Define the action value with ALLOW action.
+	noMatchActionValue := firewallActionValue{
+		Action:       0, // Allow
+		LastSeenNs:   0,
+		RateLimitPps: 0,
+		XdpSock:      0,
+	}
+
+	// Update the no_match_action map at key 0 with the ALLOW action value.
+	key := uint32(0)
+	err = objs.NoMatchAction.Update(key, &noMatchActionValue, 0)
+	if err != nil {
+		log.Fatal("Updating no_match_action map:", err)
+	}
+
 	// Attach count_packets to the network interface.
 	link, err := link.AttachXDP(link.XDPOptions{
 		Program:   objs.Firewall,
@@ -39,6 +54,13 @@ func main() {
 		log.Fatal("Attaching XDP:", err)
 	}
 	defer link.Close()
+
+	var no_match firewallActionValue
+	err = objs.NoMatchAction.Lookup(uint32(0), &no_match)
+	if err != nil {
+		log.Fatal("Map lookup:", err)
+	}
+	log.Printf("No Match Action", no_match)
 
 	log.Printf("Counting incoming packets on %s..", ifname)
 
