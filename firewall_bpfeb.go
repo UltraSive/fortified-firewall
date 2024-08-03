@@ -94,6 +94,8 @@ type firewallProgramSpecs struct {
 // It can be passed ebpf.CollectionSpec.Assign.
 type firewallMapSpecs struct {
 	Ipv4DstPunchAction *ebpf.MapSpec `ebpf:"ipv4_dst_punch_action"`
+	Ipv4FirewallMap    *ebpf.MapSpec `ebpf:"ipv4_firewall_map"`
+	Ipv4MatchRuleMap   *ebpf.MapSpec `ebpf:"ipv4_match_rule_map"`
 	Ipv4PairAction     *ebpf.MapSpec `ebpf:"ipv4_pair_action"`
 	Ipv6DstPunchAction *ebpf.MapSpec `ebpf:"ipv6_dst_punch_action"`
 	Ipv6PairAction     *ebpf.MapSpec `ebpf:"ipv6_pair_action"`
@@ -122,6 +124,8 @@ func (o *firewallObjects) Close() error {
 // It can be passed to loadFirewallObjects or ebpf.CollectionSpec.LoadAndAssign.
 type firewallMaps struct {
 	Ipv4DstPunchAction *ebpf.Map `ebpf:"ipv4_dst_punch_action"`
+	Ipv4FirewallMap    *ebpf.Map `ebpf:"ipv4_firewall_map"`
+	Ipv4MatchRuleMap   *ebpf.Map `ebpf:"ipv4_match_rule_map"`
 	Ipv4PairAction     *ebpf.Map `ebpf:"ipv4_pair_action"`
 	Ipv6DstPunchAction *ebpf.Map `ebpf:"ipv6_dst_punch_action"`
 	Ipv6PairAction     *ebpf.Map `ebpf:"ipv6_pair_action"`
@@ -133,6 +137,8 @@ type firewallMaps struct {
 func (m *firewallMaps) Close() error {
 	return _FirewallClose(
 		m.Ipv4DstPunchAction,
+		m.Ipv4FirewallMap,
+		m.Ipv4MatchRuleMap,
 		m.Ipv4PairAction,
 		m.Ipv6DstPunchAction,
 		m.Ipv6PairAction,

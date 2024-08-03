@@ -1,6 +1,7 @@
 //go:build ignore
+
 #include "vmlinux.h"
-//#include <linux/bpf.h>
+// #include <linux/bpf.h>
 #include <bpf/bpf_helpers.h>
 /*#include <linux/if_ether.h>
 #include <linux/ip.h>
@@ -25,6 +26,11 @@
 
 #ifndef ETH_P_IPV6
 #define ETH_P_IPV6 0x86DD
+#endif
+
+// Default no match action. 0 Block; 1 Allow
+#ifndef NO_MATCH
+#define NO_MATCH 1
 #endif
 
 /*
@@ -82,11 +88,42 @@ enum action_type
 
 struct action_value
 {
-    //enum action_type action;
+    // enum action_type action;
     __u32 action;
     __u64 last_seen_ns;   // Time of the last received packet in nanoseconds
     __u64 rate_limit_pps; // Rate limit in packets per second
     int xdp_sock;
+};
+
+struct firewall_index
+{
+    __u32 next_match_rule_key;
+    __u32 count;
+};
+
+enum match_type
+{
+    DST_IP,
+    DST_PORT,
+    DST_PORT_RANGE,
+    PROTOCOL,
+    SRC_IP,
+    SRC_PORT,
+    SRC_PORT_RANGE,
+    ETHERTYPE,
+    VLAN_ID
+};
+
+// Define the maximum number of match types for a rule
+#define MAX_MATCH_FIELDS 5
+
+struct match_rule
+{
+    enum match_type match_type[MAX_MATCH_FIELDS];
+    __u32 match_value[MAX_MATCH_FIELDS];
+    struct action_value action;
+
+    __u32 next_match_rule_key;
 };
 
 struct
@@ -197,6 +234,22 @@ struct
     __uint(max_entries, 1024);
 } ipv6_dst_punch_action SEC(".maps");
 
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, __u32);
+    __type(value, sizeof(struct firewall_index));
+    __uint(max_entries, 1024);
+} ipv4_firewall_map SEC(".maps");
+
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, __u32);
+    __type(value, sizeof(struct match_rule));
+    __uint(max_entries, 4096);
+} ipv4_match_rule_map SEC(".maps");
+
 /**
  * Sockets Maps
  *
@@ -233,8 +286,8 @@ static __always_inline int handle_action(struct action_value *value, __u64 now_n
             return XDP_PASS;
         }
     case REDIRECT:
-        return XDP_DROP;
-        //return bpf_redirect_map(&xsks_map, value->xdp_sock, 0);
+        return XDP_PASS;
+        // return bpf_redirect_map(&xsks_map, value->xdp_sock, 0);
     default:
         return XDP_DROP;
     }
@@ -249,10 +302,39 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
     if ((void *)(ip + 1) > data_end)
         return XDP_PASS;
 
-    struct ipv4_dst_punch_key key = {};
-    // key.src_ip = ip->saddr;
-    key.dst_ip = ip->daddr;
-    key.protocol = ip->protocol;
+    __u16 src_port;
+    __u16 dst_port;
+
+    // Convert the destination IP address to host byte order
+    __u32 dest_ip = __builtin_bswap32(ip->daddr);
+
+    // Lookup the first rule index using the destination IP
+    struct firewall_index *firewall_index_ptr = bpf_map_lookup_elem(&ipv4_firewall_map, &dest_ip);
+    if (!firewall_index_ptr)
+    {
+        bpf_printk("No rule found for dest_ip: %d.%d.%d.%d\n",
+                   (ip->daddr >> 24) & 0xFF,
+                   (ip->daddr >> 16) & 0xFF,
+                   (ip->daddr >> 8) & 0xFF,
+                   ip->daddr & 0xFF);
+        if (NO_MATCH == 0)
+        {
+            return XDP_DROP;
+        }
+        else
+        {
+            return XDP_PASS;
+        }
+    }
+
+    __u32 next_match_rule_key;
+
+    if (firewall_index_ptr != NULL)
+    {
+        next_match_rule_key = firewall_index_ptr->next_match_rule_key;
+    }
+
+    bpf_printk("Initial Rule key: %u\n", next_match_rule_key);
 
     if (ip->protocol == IP_PROTO_TCP)
     {
@@ -260,8 +342,8 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
         if ((void *)(tcp + 1) > data_end)
             return XDP_PASS;
 
-        // key.src_port = tcp->source;
-        key.dst_port = tcp->dest;
+        src_port = tcp->source;
+        dst_port = tcp->dest;
     }
     else if (ip->protocol == IP_PROTO_UDP)
     {
@@ -269,20 +351,40 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
         if ((void *)(udp + 1) > data_end)
             return XDP_PASS;
 
-        // key.src_port = udp->source;
-        key.dst_port = udp->dest;
+        src_port = udp->source;
+        dst_port = udp->dest;
     }
     else
     {
         return XDP_PASS;
     }
 
-    struct action_value *value = bpf_map_lookup_elem(&ipv4_dst_punch_action, &key);
+    while (next_match_rule_key)
+    {
+        bpf_printk("While Loop: \n");
+
+        struct firewall_index *match_rule = bpf_map_lookup_elem(&ipv4_match_rule_map, &next_match_rule_key);
+        if (!match_rule)
+        {
+            bpf_printk("Rule not found for key: %u\n", next_match_rule_key);
+        }
+        break;
+    }
+
+    /*struct action_value *value = bpf_map_lookup_elem(&ipv4_dst_punch_action, &key);
     if (value)
     {
         return handle_action(value, now_ns);
+    }*/
+
+    if (NO_MATCH == 0)
+    {
+        return XDP_DROP;
     }
-    return XDP_DROP;
+    else
+    {
+        return XDP_PASS;
+    }
 }
 
 static __always_inline int process_ipv6(struct xdp_md *ctx, struct ethhdr *eth, __u64 now_ns)
