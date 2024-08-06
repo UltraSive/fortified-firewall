@@ -8,6 +8,34 @@
       "when": 1722720289671,
       "tag": "0000_nostalgic_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1722910799315,
+      "tag": "0001_sloppy_lionheart",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1722911693842,
+      "tag": "0002_unknown_lorna_dane",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1722911998495,
+      "tag": "0003_keen_loa",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1722912223166,
+      "tag": "0004_charming_korvac",
+      "breakpoints": true
     }
   ]
 }
