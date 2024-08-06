@@ -48,36 +48,6 @@ struct ipv6_lpm_trie_key
     __u8 ip[16];
 };
 
-struct ipv4_pair_key
-{
-    __u32 src_ip;
-    __u32 dst_ip;
-};
-
-struct ipv6_pair_key
-{
-    __u8 src_ip[16];
-    __u8 dst_ip[16];
-};
-
-struct ipv4_dst_punch_key
-{
-    //__u32 src_ip;
-    __u32 dst_ip;
-    //__u16 src_port;
-    __u16 dst_port;
-    __u8 protocol;
-};
-
-struct ipv6_dst_punch_key
-{
-    //__u8 src_ip[16];
-    __u8 dst_ip[16];
-    //__u16 src_port;
-    __u16 dst_port;
-    __u8 protocol;
-};
-
 enum action_type
 {
     ALLOW,
@@ -191,48 +161,6 @@ struct
     __uint(max_entries, 1024);
 } ipv6_destination_action SEC(".maps");
 */
-/**
- * Address Pair Maps
- *
- * Perform an action based on a source IP address and destination IP address
- * with subnet mask covering all bits. /32 for IPv4 and /128 for IPv6.
- */
-struct
-{
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, struct ipv4_pair_key);
-    __type(value, struct action_value);
-    __uint(max_entries, 1024);
-} ipv4_pair_action SEC(".maps");
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, struct ipv6_pair_key);
-    __type(value, struct action_value);
-    __uint(max_entries, 1024);
-} ipv6_pair_action SEC(".maps");
-
-/**
- * Punch Maps
- *
- * This performs an action based on destination criteria.
- */
-struct
-{
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, struct ipv4_dst_punch_key);
-    __type(value, struct action_value);
-    __uint(max_entries, 1024);
-} ipv4_dst_punch_action SEC(".maps");
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, struct ipv6_dst_punch_key);
-    __type(value, struct action_value);
-    __uint(max_entries, 1024);
-} ipv6_dst_punch_action SEC(".maps");
 
 struct
 {
@@ -367,15 +295,60 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
         if (!match_rule)
         {
             bpf_printk("Rule not found for key: %u\n", next_match_rule_key);
+            break;
         }
-        break;
-    }
+        
+        bool match = true;
+        for (int i = 0; i < MAX_MATCH_FIELDS; i++)
+        {
+            switch (rule->match_type[i])
+            {
+                case DST_IP:
+                    if (dest_ip != rule->match_value[i])
+                        match = false;
+                    break;
+                case SRC_IP:
+                    if (__builtin_bswap32(ip->saddr) != rule->match_value[i])
+                        match = false;
+                    break;
+                case DST_PORT:
+                    if (dst_port != rule->match_value[i])
+                        match = false;
+                    break;
+                case SRC_PORT:
+                    if (src_port != rule->match_value[i])
+                        match = false;
+                    break;
+                // Add other cases as needed
+                default:
+                    break;
+            }
+            if (!match)
+                break;
+        }
 
-    /*struct action_value *value = bpf_map_lookup_elem(&ipv4_dst_punch_action, &key);
-    if (value)
-    {
-        return handle_action(value, now_ns);
-    }*/
+        if (match)
+        {
+            // Perform the action specified in the rule
+            switch (rule->action.action)
+            {
+                case ALLOW:
+                    return XDP_PASS;
+                case BLOCK:
+                    return XDP_DROP;
+                case RATE_LIMIT:
+                    // Implement rate limiting logic
+                    break;
+                case REDIRECT:
+                    // Implement redirect logic
+                    break;
+                default:
+                    return XDP_PASS;
+            }
+        }
+
+        next_match_rule_key = rule->next_match_rule_key;
+    }
 
     if (NO_MATCH == 0)
     {
@@ -387,6 +360,7 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
     }
 }
 
+/*
 static __always_inline int process_ipv6(struct xdp_md *ctx, struct ethhdr *eth, __u64 now_ns)
 {
     void *data_end = (void *)(long)ctx->data_end;
@@ -430,7 +404,7 @@ static __always_inline int process_ipv6(struct xdp_md *ctx, struct ethhdr *eth, 
         return handle_action(value, now_ns);
     }
     return XDP_DROP;
-}
+}*/
 
 SEC("xdp")
 int firewall(struct xdp_md *ctx)
