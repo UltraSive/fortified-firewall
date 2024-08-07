@@ -36,6 +36,20 @@
       "when": 1722912223166,
       "tag": "0004_charming_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1722962026458,
+      "tag": "0005_aberrant_demogoblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1723057407783,
+      "tag": "0006_wet_hercules",
+      "breakpoints": true
     }
   ]
 }

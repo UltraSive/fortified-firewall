@@ -32,8 +32,8 @@ export const actionValue = pgTable("action_value", {
 // Define the match_rule table
 export const matchRule = pgTable("match_rule", {
     id: serial("id").primaryKey(),
-    match_type: jsonb("match_type"),
-    match_value: jsonb("match_value"),
+    name: varchar("name"),
+    fields: jsonb("fields"),
     action_id: integer("action_id").references(() => actionValue.id),
     ip_address_id: integer("ip_address_id").references(() => ipAddress.id),
 });

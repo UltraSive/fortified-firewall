@@ -28,6 +28,7 @@
 	import Beacon from '$lib/components/Beacon.svelte';
 
 	import { page } from '$app/stores';
+	import { actionValue } from '$lib/db/schema';
 	/*type Payment = {
 		id: string;
 		amount: number;
@@ -37,19 +38,27 @@
 
 	export let data = [
 		{
-			id: 'm5gr84i9',
-			source: '0.0.0.0/0',
-			source_asn: 1337,
-			destination: '216.126.237.8',
-			protocol: 'tcp',
-			src_port: null,
-			dst_port: 80,
-			rate_limiter_id: `uuid`,
-			whitelist: true,
-			priority: false,
-			comment: 'ken99@yahoo.com'
+			id: 1,
+			name: 'HTTP',
+			fields: [
+				{
+					type: 'DST_PORT',
+					value: '80'
+				},
+				{
+					type: 'PROTOCOL',
+					value: 'TCP'
+				}
+			],
+			action_id: 1,
+			ip_address_id: 1,
+			actionValue: {
+				id: 1,
+				action: 'ALLOW',
+				rate_limit_pps: null,
+				xdp_sock: null
+			}
 		}
-		// ...
 	];
 
 	const table = createTable(readable(data), {
@@ -84,8 +93,8 @@
 			}
 		}),
 		table.column({
-			accessor: 'comment',
-			header: 'Comment',
+			accessor: 'name',
+			header: 'Name',
 			plugins: {
 				filter: {
 					exclude: false
@@ -93,8 +102,8 @@
 			}
 		}),
 		table.column({
-			accessor: 'source',
-			header: 'Source Address',
+			accessor: (item) => item.actionValue.action,
+			header: 'Action',
 			plugins: {
 				filter: {
 					exclude: false
@@ -102,42 +111,11 @@
 			}
 		}),
 		table.column({
-			accessor: 'protocol',
-			header: 'Protocol'
-		}),
-		table.column({
-			accessor: 'src_port',
-			header: 'Source Port',
-			plugins: {
-				filter: {
-					exclude: true
-				}
-			}
-		}),
-		table.column({
-			accessor: 'dst_port',
-			header: 'Destination Port',
+			accessor: 'fields',
+			header: 'Fields',
 			plugins: {
 				filter: {
 					exclude: false
-				}
-			}
-		}),
-		table.column({
-			accessor: 'whitelist',
-			header: 'Allow',
-			plugins: {
-				filter: {
-					exclude: true
-				}
-			}
-		}),
-		table.column({
-			accessor: 'createdAt',
-			header: 'Live',
-			plugins: {
-				filter: {
-					exclude: true
 				}
 			}
 		}),
@@ -201,14 +179,7 @@
 								<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
 									<Table.Head {...attrs} class="[&:has([role=checkbox])]:pl-3">
 										<div class="flex justify-center">
-											{#if cell.id === 'dst_port'}
-												<Button variant="ghost" on:click={props.sort.toggle}>
-													<Render of={cell.render()} />
-													<ArrowUpDown class={'ml-2 h-4 w-4'} />
-												</Button>
-											{:else}
-												<Render of={cell.render()} />
-											{/if}
+											<Render of={cell.render()} />
 										</div>
 									</Table.Head>
 								</Subscribe>
@@ -225,24 +196,12 @@
 								<Subscribe attrs={cell.attrs()} let:attrs>
 									<Table.Cell {...attrs}>
 										<div class="flex justify-center">
-											{#if cell.id === 'src_port' || cell.id === 'dst_port'}
-												{#if cell.value === null}
-													Any
-												{:else}
-													<Render of={cell.render()} />
-												{/if}
-											{:else if cell.id === 'createdAt'}
-												{#if new Date() - new Date(cell.value) > 30 * 60 * 1000}
-													<Beacon live=true text="Live" />
-												{:else}
-													<Beacon color=false text="Pending..." />
-												{/if}
-											{:else if cell.id === 'whitelist'}
-												{#if cell.value === true}
-													Allow
-												{:else}
-													Block
-												{/if}
+											{#if cell.id === 'fields'}
+												<div class="block">
+													{#each cell.value as field, i}
+														<p>{field.type}: {field.value}</p>
+													{/each}
+												</div>
 											{:else}
 												<Render of={cell.render()} />
 											{/if}

@@ -7,64 +7,126 @@
 
 	export let form: SuperValidated<RuleSchema>;
 
-	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
-	import { Plus } from 'lucide-svelte';
+	import { Separator } from '$lib/components/ui/separator';
 
-	const protocols = ['tcp', 'udp', 'icmp', 'port punch'];
-	$: selectedProtocol = protocols[0];
+	import { Plus, Minus } from 'lucide-svelte';
+
+	const protocols = ['TCP', 'UDP', 'ICMP', 'PUNCH'];
+
+	const actions = ['ALLOW', 'BLOCK', 'RATE_LIMIT', 'REDIRECT'];
+	$: selectedAction = actions[0];
+
+	const matchTypes = [
+		'DST_IP',
+		'DST_PORT',
+		'DST_PORT_RANGE',
+		'PROTOCOL',
+		'SRC_IP',
+		'SRC_PORT',
+		'SRC_PORT_RANGE',
+		'ETHERTYPE',
+		'VLAN_ID'
+	];
+
+	let matches = [
+		{
+			type: 'PROTOCOL',
+			value: 'TCP',
+		},
+		{
+			type: 'DST_PORT',
+			value: '80',
+		}
+	];
+
+	$: console.log(matches);
+
+	function changeType(type, i) {
+		matches[i].type = type;
+	}
+
+	function changeValue(value, i) {
+		matches[i].value = value;
+	}
 </script>
 
-<Dialog.Root>
-	<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}
-		>Create Rule <Plus class="ml-2 h-4 w-4" /></Dialog.Trigger
-	>
-	<Dialog.Content class="sm:max-w-[425px]">
-		<form method="POST" action="?/createRule" use:enhance>
-			<Dialog.Header>
-				<Dialog.Title>Create Firewall Rule</Dialog.Title>
-				<Dialog.Description>Define your firewall rule below.</Dialog.Description>
-			</Dialog.Header>
-
-			<div class="grid gap-4 py-4">
-				<div class="grid grid-cols-4 items-center gap-4">
-					<Label class="text-right">Comment</Label>
-					<Input id="comment" placeholder="SSH" class="col-span-3" />
-				</div>
-				<div class="grid grid-cols-4 items-center gap-4">
-					<Label class="text-right">Source</Label>
-					<Input id="source" value="0.0.0.0/0" class="col-span-3" />
-				</div>
-				<div class="grid grid-cols-4 items-center gap-4">
-					<Label class="text-right">Protocol</Label>
-					<Select.Root>
-						<Select.Trigger class="col-span-3">
-							<Select.Value placeholder={selectedProtocol} />
+<div class="space-y-4">
+	<div>
+		<Label for="name">Name</Label>
+		<Input id="name" value="HTTP" />
+	</div>
+	<Separator />
+	<div class="flex justify-between items-center">
+		<h3 class="font-semibold text-lg">Matches</h3>
+		<Button
+			variant="outline"
+			on:click={() => {
+				console.log('Click');
+				matches = [
+					...matches,
+					{
+						type: 'DST_PORT',
+						value: '80'
+					}
+				];
+				console.log(matches);
+			}}>Add Match<Plus class="ml-2 h-4 w-4" /></Button
+		>
+	</div>
+	{#each matches as match, i}
+		<div>
+			<Label>Match #{i}</Label>
+			<div class="space-y-1">
+				<div class="flex space-x-2 items-center">
+					<Select.Root selected={{value: match.type, label: match.type, selected: true}}>
+						<Select.Trigger>
+							<Select.Value/>
 						</Select.Trigger>
 						<Select.Content>
-							{#each protocols as protocol}
-								<Select.Item value={protocol}>{protocol}</Select.Item>
+							{#each matchTypes as type}
+								<Select.Item value={type} on:click={() => changeType(type, i)}>{type}</Select.Item>
 							{/each}
 						</Select.Content>
 					</Select.Root>
+					<Button
+						variant="destructive"
+						on:click={() => {
+							if (matches.length > 1) {
+								matches = matches.filter((_, index) => index !== i);
+							}
+						}}><Minus class="h-4 w-4" /></Button
+					>
 				</div>
-				<div class="grid grid-cols-4 items-center gap-4">
-					<Label class="text-right">Src Port</Label>
-					<Input id="src_port" value="null" class="" />
-					<Label class="text-right">Dst Port</Label>
-					<Input id="dst_port" placeholder="22" class="" />
-				</div>
-				<div class="grid grid-cols-4 items-center gap-4">
-					<Label for="whitelist" class="text-right">Allow</Label>
-					<Switch id="whitelist" checked />
-				</div>
-			</div>
 
-			<!-- 
+				{#if match.type === 'DST_PORT'}
+					<Input bind:value={matches[i].value} />
+				{:else if match.type === 'PROTOCOL'}
+					<Select.Root>
+						<Select.Trigger>
+							<Select.Value />
+						</Select.Trigger>
+						<Select.Content>
+							{#each protocols as protocol}
+								<Select.Item value={protocol} on:click={() => changeValue(protocol, i)}>{protocol}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				{/if}
+			</div>
+		</div>
+	{/each}
+	<Separator />
+	<div class="flex items-center space-x-2">
+		<Label for="allow" class="text-right">Allow</Label>
+		<Switch id="allow" checked />
+	</div>
+</div>
+<!-- 
 		<Form.Root method="POST" action="?/createRule" {form} schema={ruleSchema} let:config>
 			<Form.Field {config} name="comment">
 				<Form.Item>
@@ -133,11 +195,8 @@
 
 			<Form.Button>Create Rule</Form.Button>
 		 -->
-			<Dialog.Footer>
-				<Button type="submit">Create Rule</Button>
-				<!-- <Form.Button>Create Rule</Form.Button> -->
-			</Dialog.Footer>
-			<!-- </Form.Root> -->
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<div class="flex justify-end mt-4">
+	<Button type="submit">Create Rule</Button>
+</div>
+<!-- <Form.Button>Create Rule</Form.Button> -->
+<!-- </Form.Root> -->
