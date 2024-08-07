@@ -14,6 +14,48 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 )
 
+// Define the Go equivalents of the eBPF structures
+type MatchType uint32
+
+const (
+	DST_IP MatchType = iota
+	DST_PORT
+	DST_PORT_RANGE
+	PROTOCOL
+	SRC_IP
+	SRC_PORT
+	SRC_PORT_RANGE
+	ETHERTYPE
+	VLAN_ID
+)
+
+type ActionType uint32
+
+const (
+	ALLOW ActionType = iota
+	BLOCK
+	RATE_LIMIT
+	REDIRECT
+)
+
+type ActionValue struct {
+	Action       ActionType
+	LastSeenNs   uint64
+	RateLimitPps uint64
+	XdpSock      int32
+}
+
+type MatchField struct {
+	Type  MatchType
+	Value uint32
+}
+
+type MatchRule struct {
+	Field   [5]MatchField
+	Action  ActionValue
+	NextKey uint32
+}
+
 // Convert IPv4 address in dotted-decimal format to uint32
 func ipToUint32(ipStr string) (uint32, error) {
 	ip := net.ParseIP(ipStr)
@@ -28,39 +70,6 @@ func ipToUint32(ipStr string) (uint32, error) {
 	}
 
 	return binary.BigEndian.Uint32(ip), nil
-}
-
-// Matching
-type MatchType int
-
-const (
-	DST_IP MatchType = iota
-	DST_PORT
-	DST_PORT_RANGE
-	PROTOCOL
-	SRC_IP
-	SRC_PORT
-	SRC_PORT_RANGE
-	ETHERTYPE
-	VLAN_ID
-)
-
-func (mt MatchType) String() string {
-	return [...]string{"DST_IP", "DST_PORT", "DST_PORT_RANGE", "PROTOCOL", "SRC_IP", "SRC_PORT", "SRC_PORT_RANGE", "ETHERTYPE", "VLAN_ID"}[mt]
-}
-
-// Packet actions
-type ActionType int
-
-const (
-	ALLOW ActionType = iota
-	BLOCK
-	RATE_LIMIT
-	REDIRECT
-)
-
-func (at ActionType) String() string {
-	return [...]string{"ALLOW", "BLOCK", "RATE_LIMIT", "REDIRECT"}[at]
 }
 
 func main() {
@@ -93,6 +102,7 @@ func main() {
 	defer link.Close()
 
 	loadFirewallMap(objs)
+	loadMatchRuleMap(objs)
 
 	log.Printf("Counting incoming packets on %s..", ifname)
 
@@ -122,7 +132,7 @@ func loadFirewallMap(objs firewallObjects) {
 	firewallMap := objs.Ipv4FirewallMap
 
 	// Example: Write a value to the map
-	keyStr := "192.168.1.83"       // Example IP address
+	keyStr := "10.0.2.15"          // Example IP address
 	key, err := ipToUint32(keyStr) // Example key
 	if err != nil {
 		log.Fatalf("failed to convert IP to uint32: %v", err)
@@ -130,10 +140,10 @@ func loadFirewallMap(objs firewallObjects) {
 	value := uint32(123) // Example value
 
 	if err := firewallMap.Update(unsafe.Pointer(&key), unsafe.Pointer(&value), 0); err != nil {
-		log.Fatalf("failed to update map: %v", err)
+		log.Fatalf("failed to update firewall map: %v", err)
 	}
 
-	log.Println("Successfully updated the map")
+	log.Println("Successfully updated the firewall map")
 
 	// Example: Read a value from the map
 	var readValue uint32
@@ -142,5 +152,42 @@ func loadFirewallMap(objs firewallObjects) {
 	}
 
 	log.Printf("Read value: %d\n", readValue)
+}
 
+func loadMatchRuleMap(objs firewallObjects) {
+	// Access the map from counterMaps
+	matchRuleMap := objs.Ipv4MatchRuleMap
+
+	// Example: Write a value to the map
+	key := uint32(123)  // Example key
+	value := MatchRule{ // Define the MatchRule value
+		Field: [5]MatchField{
+			0: { // Initialize the first element
+				Type:  DST_PORT,
+				Value: 22,
+			},
+			// The remaining elements are initialized with zero values
+		},
+		Action: ActionValue{
+			Action:       BLOCK,
+			LastSeenNs:   0,
+			RateLimitPps: 0,
+			XdpSock:      0,
+		},
+		NextKey: 0, // No next rule
+	}
+
+	if err := matchRuleMap.Update(unsafe.Pointer(&key), unsafe.Pointer(&value), 0); err != nil {
+		log.Fatalf("failed to update match rule map: %v", err)
+	}
+
+	log.Println("Successfully updated the match rule map")
+
+	// Example: Read a value from the map
+	var readValue uint32
+	if err := matchRuleMap.Lookup(unsafe.Pointer(&key), unsafe.Pointer(&readValue)); err != nil {
+		log.Fatalf("failed to lookup map: %v", err)
+	}
+
+	log.Printf("Read value: %d\n", readValue)
 }

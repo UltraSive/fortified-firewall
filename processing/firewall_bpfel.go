@@ -13,36 +13,10 @@ import (
 )
 
 type firewallActionValue struct {
-	Action       uint32
-	_            [4]byte
+	Type         uint32
 	LastSeenNs   uint64
 	RateLimitPps uint64
 	XdpSock      int32
-	_            [4]byte
-}
-
-type firewallIpv4DstPunchKey struct {
-	DstIp    uint32
-	DstPort  uint16
-	Protocol uint8
-	_        [1]byte
-}
-
-type firewallIpv4PairKey struct {
-	SrcIp uint32
-	DstIp uint32
-}
-
-type firewallIpv6DstPunchKey struct {
-	DstIp    [16]uint8
-	DstPort  uint16
-	Protocol uint8
-	_        [1]byte
-}
-
-type firewallIpv6PairKey struct {
-	SrcIp [16]uint8
-	DstIp [16]uint8
 }
 
 // loadFirewall returns the embedded CollectionSpec for firewall.
@@ -93,15 +67,11 @@ type firewallProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type firewallMapSpecs struct {
-	Ipv4DstPunchAction *ebpf.MapSpec `ebpf:"ipv4_dst_punch_action"`
-	Ipv4FirewallMap    *ebpf.MapSpec `ebpf:"ipv4_firewall_map"`
-	Ipv4MatchRuleMap   *ebpf.MapSpec `ebpf:"ipv4_match_rule_map"`
-	Ipv4PairAction     *ebpf.MapSpec `ebpf:"ipv4_pair_action"`
-	Ipv6DstPunchAction *ebpf.MapSpec `ebpf:"ipv6_dst_punch_action"`
-	Ipv6PairAction     *ebpf.MapSpec `ebpf:"ipv6_pair_action"`
-	NoMatchAction      *ebpf.MapSpec `ebpf:"no_match_action"`
-	PktCount           *ebpf.MapSpec `ebpf:"pkt_count"`
-	XsksMap            *ebpf.MapSpec `ebpf:"xsks_map"`
+	Ipv4FirewallMap  *ebpf.MapSpec `ebpf:"ipv4_firewall_map"`
+	Ipv4MatchRuleMap *ebpf.MapSpec `ebpf:"ipv4_match_rule_map"`
+	NoMatchAction    *ebpf.MapSpec `ebpf:"no_match_action"`
+	PktCount         *ebpf.MapSpec `ebpf:"pkt_count"`
+	XsksMap          *ebpf.MapSpec `ebpf:"xsks_map"`
 }
 
 // firewallObjects contains all objects after they have been loaded into the kernel.
@@ -123,25 +93,17 @@ func (o *firewallObjects) Close() error {
 //
 // It can be passed to loadFirewallObjects or ebpf.CollectionSpec.LoadAndAssign.
 type firewallMaps struct {
-	Ipv4DstPunchAction *ebpf.Map `ebpf:"ipv4_dst_punch_action"`
-	Ipv4FirewallMap    *ebpf.Map `ebpf:"ipv4_firewall_map"`
-	Ipv4MatchRuleMap   *ebpf.Map `ebpf:"ipv4_match_rule_map"`
-	Ipv4PairAction     *ebpf.Map `ebpf:"ipv4_pair_action"`
-	Ipv6DstPunchAction *ebpf.Map `ebpf:"ipv6_dst_punch_action"`
-	Ipv6PairAction     *ebpf.Map `ebpf:"ipv6_pair_action"`
-	NoMatchAction      *ebpf.Map `ebpf:"no_match_action"`
-	PktCount           *ebpf.Map `ebpf:"pkt_count"`
-	XsksMap            *ebpf.Map `ebpf:"xsks_map"`
+	Ipv4FirewallMap  *ebpf.Map `ebpf:"ipv4_firewall_map"`
+	Ipv4MatchRuleMap *ebpf.Map `ebpf:"ipv4_match_rule_map"`
+	NoMatchAction    *ebpf.Map `ebpf:"no_match_action"`
+	PktCount         *ebpf.Map `ebpf:"pkt_count"`
+	XsksMap          *ebpf.Map `ebpf:"xsks_map"`
 }
 
 func (m *firewallMaps) Close() error {
 	return _FirewallClose(
-		m.Ipv4DstPunchAction,
 		m.Ipv4FirewallMap,
 		m.Ipv4MatchRuleMap,
-		m.Ipv4PairAction,
-		m.Ipv6DstPunchAction,
-		m.Ipv6PairAction,
 		m.NoMatchAction,
 		m.PktCount,
 		m.XsksMap,
