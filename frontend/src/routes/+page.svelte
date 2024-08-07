@@ -1,7 +1,12 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import DataTable from './(components)/data-table.svelte';
+
+	import type { PageData } from './$types';
+
+	export let data: PageData;
 </script>
 
-<Button>Click me</Button>
-
-<h1 class="text-3xl font-bold underline">Hello world!</h1>
+<div class="flex justify-between items-center">
+	<h2 class="text-xl font-bold">Addresses</h2>
+</div>
+<DataTable data={data.address} />
