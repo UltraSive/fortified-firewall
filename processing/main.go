@@ -51,8 +51,9 @@ type MatchField struct {
 }
 
 type MatchRule struct {
-	Field   [5]MatchField
-	Action  ActionValue
+	Field [5]MatchField
+	//Action  ActionValue
+	Action  uint32
 	NextKey uint32
 }
 
@@ -103,6 +104,7 @@ func main() {
 
 	loadFirewallMap(objs)
 	loadMatchRuleMap(objs)
+	loadActionMap(objs)
 
 	log.Printf("Counting incoming packets on %s..", ifname)
 
@@ -158,23 +160,26 @@ func loadMatchRuleMap(objs firewallObjects) {
 	// Access the map from counterMaps
 	matchRuleMap := objs.Ipv4MatchRuleMap
 
+	ip, err := ipToUint32("10.0.2.15")
+	if err != nil {
+		log.Fatalf("failed to convert IP to uint32: %v", err)
+	}
 	// Example: Write a value to the map
 	key := uint32(123)  // Example key
 	value := MatchRule{ // Define the MatchRule value
 		Field: [5]MatchField{
 			0: { // Initialize the first element
 				Type:  DST_PORT,
-				Value: 22,
+				Value: uint32(22),
+			},
+			1: { // Initialize the first element
+				Type:  DST_IP,
+				Value: ip,
 			},
 			// The remaining elements are initialized with zero values
 		},
-		Action: ActionValue{
-			Action:       BLOCK,
-			LastSeenNs:   0,
-			RateLimitPps: 0,
-			XdpSock:      0,
-		},
-		NextKey: 0, // No next rule
+		Action:  uint32(111),
+		NextKey: uint32(0), // No next rule
 	}
 
 	if err := matchRuleMap.Update(unsafe.Pointer(&key), unsafe.Pointer(&value), 0); err != nil {
@@ -186,6 +191,34 @@ func loadMatchRuleMap(objs firewallObjects) {
 	// Example: Read a value from the map
 	var readValue uint32
 	if err := matchRuleMap.Lookup(unsafe.Pointer(&key), unsafe.Pointer(&readValue)); err != nil {
+		log.Fatalf("failed to lookup map: %v", err)
+	}
+
+	log.Printf("Read value: %d\n", readValue)
+}
+
+func loadActionMap(objs firewallObjects) {
+	// Access the map from counterMaps
+	actionMap := objs.ActionMap
+
+	// Example: Write a value to the map
+	key := uint32(123) // Example key
+	value := ActionValue{
+		Action:       BLOCK,
+		LastSeenNs:   0,
+		RateLimitPps: 0,
+		XdpSock:      0,
+	}
+
+	if err := actionMap.Update(unsafe.Pointer(&key), unsafe.Pointer(&value), 0); err != nil {
+		log.Fatalf("failed to update action map: %v", err)
+	}
+
+	log.Println("Successfully updated the action rule map")
+
+	// Example: Read a value from the map
+	var readValue uint32
+	if err := actionMap.Lookup(unsafe.Pointer(&key), unsafe.Pointer(&readValue)); err != nil {
 		log.Fatalf("failed to lookup map: %v", err)
 	}
 

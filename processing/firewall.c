@@ -63,7 +63,7 @@ struct action_value
     __u64 last_seen_ns;   // Time of the last received packet in nanoseconds
     __u64 rate_limit_pps; // Rate limit in packets per second
     int xdp_sock;
-} __attribute__((packed));
+};
 
 struct firewall_index
 {
@@ -87,8 +87,9 @@ enum match_type
 struct match_field 
 {
     enum match_type type;
+    //__u8 type;
     __u32 value;
-} __attribute__((packed));
+};
 
 // Define the maximum number of match types for a rule
 #define MAX_MATCH_FIELDS 5
@@ -96,10 +97,11 @@ struct match_field
 struct match_rule
 {
     struct match_field field[MAX_MATCH_FIELDS];
-    struct action_value action;
+    //struct action_value action;
+    __u32 action_key;
 
     __u32 next_key;
-} __attribute__((packed));
+};
 
 struct
 {
@@ -183,6 +185,14 @@ struct
     __uint(max_entries, 4096);
 } ipv4_match_rule_map SEC(".maps");
 
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, __u32);
+    __type(value, sizeof(struct action_value));
+    __uint(max_entries, 4096);
+} action_map SEC(".maps");
+
 /**
  * Sockets Maps
  *
@@ -197,22 +207,33 @@ struct
 } xsks_map SEC(".maps");
 
 static inline int handle_no_match() {
+    bpf_printk("handling no match: %u\n", NO_MATCH);
     return (NO_MATCH == 0) ? XDP_DROP : XDP_PASS;
 }
 
-static __always_inline int handle_action(struct action_value action, __u64 now_ns)
+static __always_inline int handle_action(__u32 action_key, __u64 now_ns)
 {
-    bpf_printk("action last_seen_ns: %llu\n", action.last_seen_ns);
+    bpf_printk("action key: %u\n", action_key);
+
+    __u32 key = 1;
+
+    struct action_value *action = bpf_map_lookup_elem(&action_map, &key);
+    if (!action)
+    {
+        return handle_no_match();
+    } else {
+        bpf_printk("Found action");
+    }
     
     /*
-    switch (action.type)
+    switch (action->type)
     {
     case ALLOW:
         return XDP_PASS;
     case BLOCK:
         return XDP_DROP;
     case RATE_LIMIT:
-        __u64 time_diff_ns = now_ns - action.last_seen_ns;
+        __u64 time_diff_ns = now_ns - action->last_seen_ns;
         __u64 time_diff_s = time_diff_ns / 1000000000;
         __u64 current_pps = time_diff_s > 0 ? (1000000000 / time_diff_ns) : 0;
         if (current_pps > action.rate_limit_pps)
@@ -221,12 +242,12 @@ static __always_inline int handle_action(struct action_value action, __u64 now_n
         }
         else
         {
-            action.last_seen_ns = now_ns;
+            action->last_seen_ns = now_ns;
             return XDP_PASS;
         }
     case REDIRECT:
         return XDP_PASS;
-        // return bpf_redirect_map(&xsks_map, action.xdp_sock, 0);
+        // return bpf_redirect_map(&xsks_map, action->xdp_sock, 0);
     default:
         return XDP_DROP;
     }*/
@@ -314,22 +335,22 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
 
         // for (int i = 0; i < MAX_MATCH_FIELDS; i++)
         //{
-        switch (rule->field[0].type)
+        switch (rule->field[1].type)
         {
         case DST_IP:
             bpf_printk("Switch DST_IP \n");
-            if (dest_ip != rule->field[0].value)
+            if (dest_ip != rule->field[1].value)
                 match = false;
             break;
         case SRC_IP:
             bpf_printk("Switch SRC_IP \n");
-            if (src_ip != rule->field[0].value)
+            if (src_ip != rule->field[1].value)
                 match = false;
             break;
         case DST_PORT:
             bpf_printk("Switch DST_PORT \n");
-            bpf_printk("dst port value: %u packet port: %u\n", rule->field[0].value, dst_port);
-            if (dst_port != rule->field[0].value)
+            bpf_printk("dst port value: %u packet port: %u\n", rule->field[1].value, dst_port);
+            if (dst_port != rule->field[1].value)
             {
                 bpf_printk("no match\n");
                 match = false;
@@ -337,7 +358,7 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
             break;
         case SRC_PORT:
             bpf_printk("Switch SRC_PORT \n");
-            if (src_port != rule->field[0].value)
+            if (src_port != rule->field[1].value)
                 match = false;
             break;
         // Add other cases as needed
@@ -351,8 +372,9 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
 
         if (match)
         {
-            bpf_printk("match true: %u\n", match);
-            return handle_action(rule->action, now_ns);
+            //bpf_printk("next: %u\n", rule->next_key);
+            //__u32 action_key = rule->action_key;
+            //return handle_action(action_key, now_ns);
         }
 
         //next_key = rule->next_key;

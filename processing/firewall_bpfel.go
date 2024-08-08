@@ -14,9 +14,11 @@ import (
 
 type firewallActionValue struct {
 	Type         uint32
+	_            [4]byte
 	LastSeenNs   uint64
 	RateLimitPps uint64
 	XdpSock      int32
+	_            [4]byte
 }
 
 // loadFirewall returns the embedded CollectionSpec for firewall.
@@ -67,6 +69,7 @@ type firewallProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type firewallMapSpecs struct {
+	ActionMap        *ebpf.MapSpec `ebpf:"action_map"`
 	Ipv4FirewallMap  *ebpf.MapSpec `ebpf:"ipv4_firewall_map"`
 	Ipv4MatchRuleMap *ebpf.MapSpec `ebpf:"ipv4_match_rule_map"`
 	NoMatchAction    *ebpf.MapSpec `ebpf:"no_match_action"`
@@ -93,6 +96,7 @@ func (o *firewallObjects) Close() error {
 //
 // It can be passed to loadFirewallObjects or ebpf.CollectionSpec.LoadAndAssign.
 type firewallMaps struct {
+	ActionMap        *ebpf.Map `ebpf:"action_map"`
 	Ipv4FirewallMap  *ebpf.Map `ebpf:"ipv4_firewall_map"`
 	Ipv4MatchRuleMap *ebpf.Map `ebpf:"ipv4_match_rule_map"`
 	NoMatchAction    *ebpf.Map `ebpf:"no_match_action"`
@@ -102,6 +106,7 @@ type firewallMaps struct {
 
 func (m *firewallMaps) Close() error {
 	return _FirewallClose(
+		m.ActionMap,
 		m.Ipv4FirewallMap,
 		m.Ipv4MatchRuleMap,
 		m.NoMatchAction,
