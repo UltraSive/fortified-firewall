@@ -13,13 +13,15 @@
 	/** @type {import('./$types').PageData} */
 	export let data;
 	console.log(data.address.matchRules);
+
+	let createRuleDialog = false;
 </script>
 
 <!-- <button on:click={() => toast("Hello world")}>Show toast</button>-->
 
 <div class="flex justify-between items-center">
 	<h2 class="text-xl font-bold">{$page.params.ip}</h2>
-	<Dialog.Root>
+	<Dialog.Root bind:open={createRuleDialog}>
 		<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}
 			>Create Rule <Plus class="ml-2 h-4 w-4" /></Dialog.Trigger
 		>
@@ -29,7 +31,7 @@
 					<Dialog.Title>Create Firewall Rule</Dialog.Title>
 					<Dialog.Description>Define your firewall rule below.</Dialog.Description>
 				</Dialog.Header>
-				<CreateRule form={data.newRuleForm} />
+				<CreateRule bind:open={createRuleDialog} />
 			</form>
 		</Dialog.Content>
 	</Dialog.Root>

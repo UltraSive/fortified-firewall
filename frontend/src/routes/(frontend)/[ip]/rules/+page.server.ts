@@ -34,6 +34,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	};
 };
 
+/*
 export const actions = {
 	createRule: async ({ event, request }) => {
         console.log("Create rule");
@@ -46,3 +47,4 @@ export const actions = {
         return { success: true };
     },
 } satisfies Actions;
+ */

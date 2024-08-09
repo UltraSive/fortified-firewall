@@ -102,7 +102,7 @@
 			}
 		}),
 		table.column({
-			accessor: (item) => item.actionValue.action,
+			accessor: (action) => action.actionValue.type,
 			header: 'Action',
 			plugins: {
 				filter: {

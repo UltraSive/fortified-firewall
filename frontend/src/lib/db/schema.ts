@@ -17,15 +17,15 @@ export const location = pgTable("location", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }),
     endpoint: varchar("endpoint"),
+    interface: varchar("interface", { length: 255 }),
     location_id: integer("location_id").references(() => location.id),
   });
 
 // Define the action_value table
 export const actionValue = pgTable("action_value", {
     id: serial("id").primaryKey(),
-    action: varchar("action"),
-    rate_limit_pps: integer("rate_limit_pps"),
-    xdp_sock: integer("xdp_sock"),
+    type: varchar("type"),
+    value: integer("value"),
     //match_id: integer("match_id").references(() => matchRule.id),
 });
 
@@ -80,6 +80,9 @@ export const matchRuleRelations = relations(matchRule, ({ one }) => ({
     }),
 }));
 
-export const actionValueRelations = relations(actionValue, ({ many }) => ({
-    matchRules: many(matchRule),
-}));
+/*export const actionValueRelations = relations(actionValue, ({ one }) => ({
+    matchRules: one(matchRule, {
+        fields: [actionValue.match_id],
+        references: [matchRule.id],
+    }),
+}));*/

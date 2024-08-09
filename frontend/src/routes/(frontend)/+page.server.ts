@@ -1,4 +1,4 @@
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from '../$types';
 import db from "$lib/db/db.server";
 import { matchRule, ipAddress, actionValue, ipAddressRelations } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
