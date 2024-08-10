@@ -23,7 +23,7 @@
 <div class="flex justify-between items-center">
 	<div>
 		<h2 class="text-xl font-bold">{$page.params.ip}</h2>
-		<a href="/" class="flex items-center text-muted-foreground hover:underline"
+		<a href="/ip" class="flex items-center text-muted-foreground hover:underline"
 			><ArrowLeft class="w-4 h-4" />Addresses</a
 		>
 	</div>
