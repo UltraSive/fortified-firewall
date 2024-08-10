@@ -1,4 +1,4 @@
-import apiClient from "./api";
+import apiClient from "../api";
 
 export const protocols = ['TCP', 'UDP', 'ICMP', 'PUNCH'];
 
@@ -43,7 +43,7 @@ export async function postMatchRule(ip: String, name: String, matches: Match[], 
     }
 }
 
-export async function editMatchRule(id: Number, matches: Match[], action: Action) {
+export async function putMatchRule(id: Number, matches: Match[], action: Action) {
 
 }
 

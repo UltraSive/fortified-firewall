@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	import type { Match, Action } from '$lib/rules';
-	import { protocols, actionTypes, matchTypes } from '$lib/rules';
-	import { postMatchRule } from '$lib/rules';
+	import type { Match, Action } from '$lib/client/rules.client';
+	import { protocols, actionTypes, matchTypes } from '$lib/client/rules.client';
+	import { postMatchRule } from '$lib/client/rules.client';
 
 	import { toast } from 'svelte-sonner';
 
