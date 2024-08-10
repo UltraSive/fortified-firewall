@@ -3,7 +3,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { MoreHorizontal } from 'lucide-svelte';
 	export let address: String;
-	console.log(address)
 </script>
 
 <DropdownMenu.Root>

@@ -38,10 +38,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
     })
   }
 };
-/*
-export const GET: RequestHandler = async ({ params, request }) => {
+
+export const GET: RequestHandler = async ({ params }) => {
   try {
-    
+    return json({});
   } catch (error) {
     console.log(error);
     return json({
@@ -50,7 +50,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
     })
   }
 };
-
+/*
 export const PUT: RequestHandler = async ({ params, request }) => {
   try {
     

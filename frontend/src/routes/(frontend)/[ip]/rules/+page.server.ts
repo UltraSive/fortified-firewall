@@ -3,6 +3,21 @@ import db from "$lib/db/db.server";
 import { matchRule, ipAddress, actionValue, ipAddressRelations } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 
+async function loadAddress(ip: String) {
+    const address = await db.query.ipAddress.findFirst({
+        where: eq(ipAddress.address, ip),
+        with: {
+            matchRules: {
+                with: {
+                    actionValue: true
+                }
+            }
+        }
+    });
+
+    return address;
+}
+
 export const load: PageServerLoad = async ({ params }) => {
     /*const rules = await db.select({
         id: matchRule.id,
@@ -18,29 +33,18 @@ export const load: PageServerLoad = async ({ params }) => {
       .innerJoin(actionValue, eq(matchRule.action_id, actionValue.id))
       .where(eq(ipAddress.address, params.ip));*/
 
-    const address = await db.query.ipAddress.findFirst({
-        where: eq(ipAddress.address, params.ip),
-        with: {
-            matchRules: {
-                with: {
-                    actionValue: true
-                }
-            }
-        }
-    })
-
-	return {
-		address
-	};
+    return {
+        address: loadAddress(params.ip),
+    };
 };
 
 /*
 export const actions = {
-	createRule: async ({ event, request }) => {
+    createRule: async ({ event, request }) => {
         console.log("Create rule");
 
         const data = await request.formData();
-		const dst_port = data.get('dst_port');
+        const dst_port = data.get('dst_port');
 
         console.log("dst_port: ", dst_port);
 

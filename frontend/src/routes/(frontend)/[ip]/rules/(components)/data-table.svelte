@@ -150,7 +150,19 @@
 <div>
 	<div class="flex justify-between py-4">
 		<Input class="max-w-sm" placeholder="Filter rules..." type="text" bind:value={$filterValue} />
-		<div class="ml-2">
+		<div class="space-x-2">
+			{#if Object.keys($selectedDataIds).length > 0}
+				<Button
+					variant="destructive"
+					on:click={() => {
+						let deleteRules = [];
+						for (let key of Object.keys($selectedDataIds)) {
+							deleteRules = [...deleteRules, (data[Number(key)].id)]
+						}
+						console.log(deleteRules);
+					}}>Delete Selected</Button
+				>
+			{/if}
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger asChild let:builder>
 					<Button variant="outline" class="ml-auto" builders={[builder]}>

@@ -3,11 +3,15 @@ import db from "$lib/db/db.server";
 import { matchRule, ipAddress, actionValue, ipAddressRelations } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export const load: PageServerLoad = async ({ params }) => {
-    const address = await db.query.ipAddress.findMany()
+async function loadAddresses() {
+    const addresses = await db.query.ipAddress.findMany();
 
+    return addresses;
+}
+
+export const load: PageServerLoad = async ({ params }) => {
 	return {
-		address
+		addresses: loadAddresses(),
 	};
 };
 

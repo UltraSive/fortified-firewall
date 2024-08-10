@@ -5,22 +5,28 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 
-	import { Plus } from 'lucide-svelte';
+	import { Plus, ArrowLeft } from 'lucide-svelte';
+
+	import Spinner from "$lib/components/Spinner.svelte";
 
 	import DataTable from './(components)/data-table.svelte';
 	import CreateRule from './(components)/create-rule.svelte';
 
-	/** @type {import('./$types').PageData} */
-	export let data;
-	console.log(data.address.matchRules);
-
 	let createRuleDialog = false;
+
+	import type { PageData } from './$types';
+	export let data: PageData;
 </script>
 
 <!-- <button on:click={() => toast("Hello world")}>Show toast</button>-->
 
 <div class="flex justify-between items-center">
-	<h2 class="text-xl font-bold">{$page.params.ip}</h2>
+	<div>
+		<h2 class="text-xl font-bold">{$page.params.ip}</h2>
+		<a href="/" class="flex items-center text-muted-foreground hover:underline"
+			><ArrowLeft class="w-4 h-4" />Addresses</a
+		>
+	</div>
 	<Dialog.Root bind:open={createRuleDialog}>
 		<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}
 			>Create Rule <Plus class="ml-2 h-4 w-4" /></Dialog.Trigger
@@ -36,4 +42,10 @@
 		</Dialog.Content>
 	</Dialog.Root>
 </div>
-<DataTable data={data.address.matchRules}/>
+{#await data.address}
+	<div class="my-4 flex justify-center">
+		<Spinner />
+	</div>
+{:then address}
+	<DataTable data={address.matchRules} />
+{/await}
