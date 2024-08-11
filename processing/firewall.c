@@ -84,7 +84,7 @@ enum match_type
     VLAN_ID
 };
 
-struct match_field 
+struct match_field
 {
     enum match_type type;
     //__u8 type;
@@ -97,9 +97,8 @@ struct match_field
 struct match_rule
 {
     struct match_field field[MAX_MATCH_FIELDS];
-    //struct action_value action;
+    // struct action_value action;
     __u32 action_key;
-
     __u32 next_key;
 };
 
@@ -181,7 +180,7 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, __u32);
-    __type(value, sizeof(struct match_rule));
+    __type(value, struct match_rule);
     __uint(max_entries, 4096);
 } ipv4_match_rule_map SEC(".maps");
 
@@ -189,7 +188,7 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, __u32);
-    __type(value, sizeof(struct action_value));
+    __type(value, struct action_value);
     __uint(max_entries, 4096);
 } action_map SEC(".maps");
 
@@ -206,7 +205,8 @@ struct
     __type(value, int);
 } xsks_map SEC(".maps");
 
-static inline int handle_no_match() {
+static inline int handle_no_match()
+{
     bpf_printk("handling no match: %u\n", NO_MATCH);
     return (NO_MATCH == 0) ? XDP_DROP : XDP_PASS;
 }
@@ -217,26 +217,29 @@ static __always_inline int handle_action(__u32 action_key, __u64 now_ns)
 
     __u32 key = 1;
 
-    struct action_value *action = bpf_map_lookup_elem(&action_map, &key);
+    struct action_value *action = bpf_map_lookup_elem(&action_map, &action_key);
     if (!action)
     {
         return handle_no_match();
-    } else {
-        bpf_printk("Found action");
     }
-    
-    /*
+    else
+    {
+        bpf_printk("Found action %u\n", action->type);
+    }
+
     switch (action->type)
     {
     case ALLOW:
+        bpf_printk("XDP_PASS");
         return XDP_PASS;
     case BLOCK:
+        bpf_printk("XDP_DROP");
         return XDP_DROP;
     case RATE_LIMIT:
         __u64 time_diff_ns = now_ns - action->last_seen_ns;
         __u64 time_diff_s = time_diff_ns / 1000000000;
         __u64 current_pps = time_diff_s > 0 ? (1000000000 / time_diff_ns) : 0;
-        if (current_pps > action.rate_limit_pps)
+        if (current_pps > action->rate_limit_pps)
         {
             return XDP_DROP;
         }
@@ -246,13 +249,13 @@ static __always_inline int handle_action(__u32 action_key, __u64 now_ns)
             return XDP_PASS;
         }
     case REDIRECT:
-        return XDP_PASS;
-        // return bpf_redirect_map(&xsks_map, action->xdp_sock, 0);
+        //return XDP_PASS;
+        return bpf_redirect_map(&xsks_map, action->xdp_sock, 0);
     default:
         return XDP_DROP;
-    }*/
+    }
 
-   return XDP_PASS;
+    return handle_no_match();
 }
 
 static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, __u64 now_ns)
@@ -271,15 +274,17 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
     __u32 dest_ip = __builtin_bswap32(ip->daddr);
     __u32 src_ip = __builtin_bswap32(ip->saddr);
 
+    bpf_printk("dest_ip: %d.%d.%d.%d\n",
+               (ip->daddr >> 24) & 0xFF,
+               (ip->daddr >> 16) & 0xFF,
+               (ip->daddr >> 8) & 0xFF,
+               ip->daddr & 0xFF);
+
     // Lookup the first rule index using the destination IP
     struct firewall_index *firewall_index_ptr = bpf_map_lookup_elem(&ipv4_firewall_map, &dest_ip);
     if (!firewall_index_ptr)
     {
-        bpf_printk("No rule found for dest_ip: %d.%d.%d.%d\n",
-                   (ip->daddr >> 24) & 0xFF,
-                   (ip->daddr >> 16) & 0xFF,
-                   (ip->daddr >> 8) & 0xFF,
-                   ip->daddr & 0xFF);
+        bpf_printk("No rule found for dest_ip");
         return handle_no_match();
     }
 
@@ -329,55 +334,55 @@ static __always_inline int process_ipv4(struct xdp_md *ctx, struct ethhdr *eth, 
             break;
         }
         bpf_printk("rule: %p\n", rule);
-        // bpf_printk("rule: %u\n", rule->next_key);
+        bpf_printk("rule: %u\n", rule->next_key);
 
         bpf_printk("match status: %u\n", match);
 
-        // for (int i = 0; i < MAX_MATCH_FIELDS; i++)
-        //{
-        switch (rule->field[1].type)
+        for (int i = 0; i < MAX_MATCH_FIELDS; i++)
         {
-        case DST_IP:
-            bpf_printk("Switch DST_IP \n");
-            if (dest_ip != rule->field[1].value)
-                match = false;
-            break;
-        case SRC_IP:
-            bpf_printk("Switch SRC_IP \n");
-            if (src_ip != rule->field[1].value)
-                match = false;
-            break;
-        case DST_PORT:
-            bpf_printk("Switch DST_PORT \n");
-            bpf_printk("dst port value: %u packet port: %u\n", rule->field[1].value, dst_port);
-            if (dst_port != rule->field[1].value)
+            switch (rule->field[0].type)
             {
-                bpf_printk("no match\n");
-                match = false;
+            case DST_IP:
+                bpf_printk("Switch DST_IP \n");
+                if (dest_ip != rule->field[0].value)
+                    match = false;
+                break;
+            case SRC_IP:
+                bpf_printk("Switch SRC_IP \n");
+                if (src_ip != rule->field[0].value)
+                    match = false;
+                break;
+            case DST_PORT:
+                bpf_printk("Switch DST_PORT \n");
+                bpf_printk("dst port value: %u packet port: %u\n", rule->field[0].value, dst_port);
+                if (dst_port != rule->field[0].value)
+                {
+                    bpf_printk("no match\n");
+                    match = false;
+                }
+                break;
+            case SRC_PORT:
+                bpf_printk("Switch SRC_PORT \n");
+                if (src_port != rule->field[0].value)
+                    match = false;
+                break;
+            // Add other cases as needed
+            default:
+                bpf_printk("Switch default \n");
+                break;
             }
-            break;
-        case SRC_PORT:
-            bpf_printk("Switch SRC_PORT \n");
-            if (src_port != rule->field[1].value)
-                match = false;
-            break;
-        // Add other cases as needed
-        default:
-            bpf_printk("Switch default \n");
-            break;
+            if (!match)
+                break;
         }
-        if (!match)
-            break;
-        //}
 
         if (match)
         {
-            //bpf_printk("next: %u\n", rule->next_key);
-            //__u32 action_key = rule->action_key;
-            //return handle_action(action_key, now_ns);
+            // bpf_printk("next: %u\n", rule->next_key);
+            //__u32 action_key = 123;
+            return handle_action(rule->action_key, now_ns);
         }
 
-        //next_key = rule->next_key;
+        next_key = rule->next_key;
 
         break;
     }

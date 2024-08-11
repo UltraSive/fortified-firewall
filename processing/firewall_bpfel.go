@@ -21,6 +21,15 @@ type firewallActionValue struct {
 	_            [4]byte
 }
 
+type firewallMatchRule struct {
+	Field [5]struct {
+		Type  uint32
+		Value uint32
+	}
+	ActionKey uint32
+	NextKey   uint32
+}
+
 // loadFirewall returns the embedded CollectionSpec for firewall.
 func loadFirewall() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_FirewallBytes)

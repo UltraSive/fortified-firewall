@@ -39,7 +39,8 @@ const (
 )
 
 type ActionValue struct {
-	Action       ActionType
+	Type ActionType
+	//Type         uint32
 	LastSeenNs   uint64
 	RateLimitPps uint64
 	XdpSock      int32
@@ -170,7 +171,7 @@ func loadMatchRuleMap(objs firewallObjects) {
 		Field: [5]MatchField{
 			0: { // Initialize the first element
 				Type:  DST_PORT,
-				Value: uint32(22),
+				Value: uint32(41641),
 			},
 			1: { // Initialize the first element
 				Type:  DST_IP,
@@ -202,9 +203,9 @@ func loadActionMap(objs firewallObjects) {
 	actionMap := objs.ActionMap
 
 	// Example: Write a value to the map
-	key := uint32(123) // Example key
+	key := uint32(111) // Example key
 	value := ActionValue{
-		Action:       BLOCK,
+		Type:         ALLOW,
 		LastSeenNs:   0,
 		RateLimitPps: 0,
 		XdpSock:      0,
