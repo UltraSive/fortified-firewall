@@ -22,9 +22,9 @@ export async function GetAddress(id: string) {
   try {
     const address = await prisma.address.findUnique({
       where: { id },  // Find the address by ID
-      include: { 
+      include: {
         location: true,  // You can include related data if needed
-        firewall: true,  
+        firewall: true,
       },
     });
     return address;
