@@ -1,1 +1,0 @@
-ALTER TABLE "match_rule" ADD COLUMN "name" varchar;
