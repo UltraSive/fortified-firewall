@@ -1,8 +1,7 @@
 <script lang="ts">
 	import * as Table from '$lib/components/ui/table';
-	import { Button } from '$lib/components/ui/button';
 
-	import { Settings2 } from 'lucide-svelte';
+	import Actions from './address-actions.svelte';
 
 	let { addresses } = $props();
 </script>
@@ -30,8 +29,7 @@
 						>{#if address.firewall}{address.firewall.name}{:else}N/A{/if}</Table.Cell
 					>
 					<Table.Cell class="text-right"
-						><Button href="addresses/{address.id}" variant="ghost" size="sm"><Settings2 class="h-4 w-4"></Settings2></Button
-						></Table.Cell
+						><Actions {address}></Actions></Table.Cell
 					>
 				</Table.Row>
 			{/each}

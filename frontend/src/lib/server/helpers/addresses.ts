@@ -1,11 +1,12 @@
 import prisma, { Version, Action } from "$lib/server/db";
 
-export async function CreateAddress(value: string, version: Version, locationId: string) {
+export async function CreateAddress(value: string, version: Version, netmask: string, locationId: string) {
   try {
     const address = await prisma.address.create({
       data: {
         id: value,
         version,
+        netmask,
         location: {
           connect: { id: locationId },  // Connects the location to the address by ID
         },
