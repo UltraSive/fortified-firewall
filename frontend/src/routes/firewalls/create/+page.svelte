@@ -5,23 +5,37 @@
 
 	let rules = $state([
 		{
-			id: 1,
-			name: 'Allow Internal Traffic',
-			sourceIp: '192.168.1.0/24',
-			destinationIp: '192.168.1.0/24',
-			action: 'Allow'
-		},
-		{ id: 2, name: 'Block External SSH', sourceIp: 'Any', destinationIp: 'Any', action: 'Deny' },
-		{
-			id: 3,
-			name: 'Allow HTTP/HTTPS',
-			sourceIp: 'Any',
-			destinationIp: '10.0.0.1',
-			action: 'Allow'
-		},
-		{ id: 4, name: 'Deny All', sourceIp: 'Any', destinationIp: 'Any', action: 'Deny' }
+      id: Math.random(),
+			name: 'SSH',
+			src_ip: '0.0.0.0/0',
+			protocol: 'TCP',
+			port: '22',
+			action: 'ALLOW'
+		}
 	]);
+
+  async function createFirewall() {
+
+  }
 </script>
 
 <h1 class="my-4 text-3xl font-bold">Create Rule</h1>
+<div class="mb-4 flex items-center justify-end space-x-2">
+	<Button
+		onclick={() => {
+			rules = [
+				...rules,
+				{
+					id: Math.random(),
+					name: 'SSH',
+					src_ip: '0.0.0.0/0',
+					protocol: 'TCP',
+					port: '22',
+					action: 'ALLOW'
+				}
+			];
+		}}>Add Rule</Button
+	>
+	<Button onclick={() => createFirewall()}>Save</Button>
+</div>
 <Editor bind:rules></Editor>

@@ -17,7 +17,7 @@
 		<div class="absolute">
 			<Sidebar.Trigger class="translate-x-2 translate-y-2" />
 		</div>
-		<div class="container mt-4">
+		<div class="m-4">
 			{@render children?.()}
 		</div>
 	</main>
