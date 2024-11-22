@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Ghost, Network, BrickWall, EthernetPort, Settings, Ban, ChevronDown } from 'lucide-svelte';
+	import { Ghost, Network, BrickWall, EthernetPort, Settings, Ban, MapPin, ChevronDown } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import LightSwitch from './light-switch.svelte';
@@ -25,6 +25,11 @@
 
   // settings items.
 	const settings = [
+    {
+			title: 'Locations',
+			url: '/locations',
+			icon: MapPin
+		},
 		{
 			title: 'Block List',
 			url: '/blocklist',
